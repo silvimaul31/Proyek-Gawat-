@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <title>Gawat!!!! - User Interface</title>
     <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
-        :root { --timsar: #ff8c00; }
+        :root { --timsar: #ff8c00; --maroon: #800000; --orange: #ff8c00; --navy: #000080; }
 
         /* Animasi Berdenyut untuk Tombol SOS */
         @keyframes pulse-sos {
@@ -28,7 +32,7 @@
             height: 100px;
             border-radius: 50%;
             color: white;
-            font-family: 'Orbitron';
+            font-family: 'Orbitron', sans-serif;
             font-size: 20px;
             font-weight: bold;
             cursor: pointer;
@@ -36,8 +40,18 @@
             transition: 0.3s;
         }
 
-        .btn-panic:active {
-            transform: scale(0.9);
+        .btn-panic:active { transform: scale(0.9); }
+
+        .btn-sos {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: left;
         }
     </style>
 </head>
@@ -49,7 +63,7 @@
         </div>
 
         <div class="sos-container">
-            <button onclick="sendSOS()" class="btn-panic">SOS</button>
+            <button id="sos-btn" class="btn-panic">SOS</button>
             <p style="color: #ff4444; font-family: 'Orbitron'; font-size: 9px; margin-top: 10px; letter-spacing: 1px;">
                 EMERGENCY ONLY
             </p>
@@ -71,75 +85,80 @@
                       style="width:100%; padding:12px; margin:10px 0 20px 0; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:white; box-sizing: border-box; outline:none; height: 80px; resize: none; font-family: 'Poppins', sans-serif;"></textarea>
 
             <div style="display: grid; gap: 15px;">
-                <button onclick="kirimKeAdmin('Ambulance', '🚑')" class="btn-sos" style="background:var(--maroon); box-shadow: 0 0 15px var(--maroon);">🚑 AMBULANCE (MEDIS)</button>
-                <button onclick="kirimKeAdmin('Damkar', '🔥')" class="btn-sos" style="background:var(--orange); box-shadow: 0 0 15px var(--orange);">🔥 DAMKAR (KEBAKARAN)</button>
-                <button onclick="kirimKeAdmin('Polisi', '🚔')" class="btn-sos" style="background:var(--navy); box-shadow: 0 0 15px var(--navy);">🚔 POLISI (KRIMINAL)</button>
-                <button onclick="kirimKeAdmin('Timsar', '🚁')" class="btn-sos" style="background:var(--timsar); box-shadow: 0 0 15px var(--timsar);">🚁 TIMSAR (PENYELAMATAN)</button>
+                <button onclick="kirimKeFirebase('Ambulance')" class="btn-sos" style="background:var(--maroon); box-shadow: 0 0 15px var(--maroon);">🚑 AMBULANCE (MEDIS)</button>
+                <button onclick="kirimKeFirebase('Damkar')" class="btn-sos" style="background:var(--orange); box-shadow: 0 0 15px var(--orange);">🔥 DAMKAR (KEBAKARAN)</button>
+                <button onclick="kirimKeFirebase('Polisi')" class="btn-sos" style="background:var(--navy); box-shadow: 0 0 15px var(--navy);">🚔 POLISI (KRIMINAL)</button>
+                <button onclick="kirimKeFirebase('Timsar')" class="btn-sos" style="background:var(--timsar); box-shadow: 0 0 15px var(--timsar);">🚁 TIMSAR (PENYELAMATAN)</button>
             </div>
         </div>
-        <p style="text-align:center; padding-bottom:20px; font-size:9px; opacity:0.5; letter-spacing:1px;">GPS AKTIF - REAL TIME TRACKING</p>
         
+        <p style="text-align:center; padding-bottom:20px; font-size:9px; opacity:0.5; letter-spacing:1px;">GPS AKTIF - REAL TIME TRACKING</p>
         <a href="admin.html" style="display:block; text-align:center; padding-bottom:10px; color:rgba(255,255,255,0.1); text-decoration:none; font-size:8px;">OFFICER LOGIN</a>
     </div>
 
     <script>
-        // FUNGSI SOS (TANPA FORM)
-        function sendSOS() {
-            if (confirm("KIRIM SINYAL SOS SEKARANG? Petugas akan segera melacak lokasi Anda!")) {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(pos => {
-                        const dataSOS = {
-                            nama: "⚠️ SOS USER",
-                            detail: "PANGGILAN DARURAT SOS! BUTUH BANTUAN SEGERA!", 
-                            prioritas: "Tinggi",
-                            kategori: "Ambulance", 
-                            lat: pos.coords.latitude,
-                            lng: pos.coords.longitude,
-                            waktu: new Date().toLocaleTimeString()
-                        };
-                        
-                        let list = JSON.parse(localStorage.getItem('laporan_gawat')) || [];
-                        list.push(dataSOS);
-                        localStorage.setItem('laporan_gawat', JSON.stringify(list));
-                        
-                        alert("🚨 SINYAL SOS TERKIRIM! Tetap di posisi Anda.");
-                    }, () => alert("Gagal melacak lokasi. Pastikan GPS aktif!"));
-                }
-            }
-        }
+        // --- KONFIGURASI FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSy...", 
+            authDomain: "gawatapp.firebaseapp.com",
+            databaseURL: "https://gawatapp-default-rtdb.firebaseio.com", 
+            projectId: "gawatapp",
+            storageBucket: "gawatapp.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
 
-        // FUNGSI FORMULIR BIASA
-        function kirimKeAdmin(kategori, ikon) {
-            const nama = document.getElementById('nama-pelapor').value;
-            const detail = document.getElementById('detail-kejadian').value; 
-            const prioritas = document.getElementById('prioritas').value;
-            
-            if(!nama || !detail) {
-                alert("Lengkapi nama dan detail kejadian!");
-                return;
-            }
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
+        // --- FUNGSI KIRIM LAPORAN ---
+        function laporGawat(nama, teks, prioritas, kategori) {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    const dataFinal = {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    db.ref('laporan_gawat').push({
                         nama: nama,
-                        detail: detail, 
+                        pesan: teks,
                         prioritas: prioritas,
                         kategori: kategori,
                         lat: pos.coords.latitude,
                         lng: pos.coords.longitude,
-                        waktu: new Date().toLocaleTimeString()
-                    };
-                    
-                    let list = JSON.parse(localStorage.getItem('laporan_gawat')) || [];
-                    list.push(dataFinal);
-                    localStorage.setItem('laporan_gawat', JSON.stringify(list));
-                    
-                    alert(`⚠️ ALARM ${kategori.toUpperCase()} TERKIRIM!`);
-                    document.getElementById('nama-pelapor').value = "";
-                    document.getElementById('detail-kejadian').value = "";
-                }, () => alert("Pastikan GPS aktif!"));
+                        waktu: new Date().toLocaleTimeString(),
+                        timestamp: Date.now()
+                    }).then(() => {
+                        alert(`🚀 LAPORAN ${kategori.toUpperCase()} TERKIRIM!`);
+                        document.getElementById('nama-pelapor').value = "";
+                        document.getElementById('detail-kejadian').value = "";
+                    }).catch((err) => {
+                        alert("Gagal kirim: " + err.message);
+                    });
+                }, () => {
+                    alert("Tolong izinkan GPS agar petugas tahu lokasi Anda.");
+                });
+            } else {
+                alert("Browser tidak mendukung GPS.");
             }
+        }
+
+        // --- LOGIKA TOMBOL ---
+
+        // Tombol SOS Instan
+        document.getElementById('sos-btn').onclick = () => {
+            if(confirm("KIRIM SINYAL SOS SEKARANG? Petugas akan segera melacak Anda!")) {
+                laporGawat("⚠️ SOS USER", "PANGGILAN DARURAT SOS! BUTUH BANTUAN SEGERA!", "Tinggi", "Ambulance");
+            }
+        };
+
+        // Tombol Kategori (Ambulance, Damkar, dll)
+        function kirimKeFirebase(kategori) {
+            const nama = document.getElementById('nama-pelapor').value;
+            const detail = document.getElementById('detail-kejadian').value;
+            const prioritas = document.getElementById('prioritas').value;
+
+            if(!nama || !detail) {
+                alert("Lengkapi nama dan detail kejadian!");
+                return;
+            }
+            laporGawat(nama, detail, prioritas, kategori);
         }
     </script>
 </body>
