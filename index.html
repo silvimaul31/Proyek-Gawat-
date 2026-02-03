@@ -6,6 +6,39 @@
     <link rel="stylesheet" href="style.css">
     <style>
         :root { --timsar: #ff8c00; }
+
+        /* Animasi Berdenyut untuk Tombol SOS */
+        @keyframes pulse-sos {
+            0% { transform: scale(1); box-shadow: 0 0 0px #ff0000; }
+            50% { transform: scale(1.05); box-shadow: 0 0 30px #ff0000; }
+            100% { transform: scale(1); box-shadow: 0 0 0px #ff0000; }
+        }
+
+        .sos-container {
+            padding: 20px;
+            text-align: center;
+            background: rgba(255, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 0, 0, 0.3);
+        }
+
+        .btn-panic {
+            background: linear-gradient(45deg, #ff0000, #800000);
+            border: 3px solid #ffffff;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            color: white;
+            font-family: 'Orbitron';
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            animation: pulse-sos 1s infinite;
+            transition: 0.3s;
+        }
+
+        .btn-panic:active {
+            transform: scale(0.9);
+        }
     </style>
 </head>
 <body>
@@ -13,6 +46,13 @@
         <div style="background: rgba(128, 0, 0, 0.8); padding: 25px; text-align: center;">
             <h1 style="margin:0; font-family: 'Orbitron'; letter-spacing:2px;">🚨 GAWAT!!!!</h1>
             <p style="font-size:11px; margin-top:5px; opacity:0.8;">TEKAN TOMBOL UNTUK BANTUAN INSTAN</p>
+        </div>
+
+        <div class="sos-container">
+            <button onclick="sendSOS()" class="btn-panic">SOS</button>
+            <p style="color: #ff4444; font-family: 'Orbitron'; font-size: 9px; margin-top: 10px; letter-spacing: 1px;">
+                EMERGENCY ONLY
+            </p>
         </div>
 
         <div style="padding: 25px;">
@@ -38,9 +78,37 @@
             </div>
         </div>
         <p style="text-align:center; padding-bottom:20px; font-size:9px; opacity:0.5; letter-spacing:1px;">GPS AKTIF - REAL TIME TRACKING</p>
+        
+        <a href="admin.html" style="display:block; text-align:center; padding-bottom:10px; color:rgba(255,255,255,0.1); text-decoration:none; font-size:8px;">OFFICER LOGIN</a>
     </div>
 
     <script>
+        // FUNGSI SOS (TANPA FORM)
+        function sendSOS() {
+            if (confirm("KIRIM SINYAL SOS SEKARANG? Petugas akan segera melacak lokasi Anda!")) {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        const dataSOS = {
+                            nama: "⚠️ SOS USER",
+                            detail: "PANGGILAN DARURAT SOS! BUTUH BANTUAN SEGERA!", 
+                            prioritas: "Tinggi",
+                            kategori: "Ambulance", 
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude,
+                            waktu: new Date().toLocaleTimeString()
+                        };
+                        
+                        let list = JSON.parse(localStorage.getItem('laporan_gawat')) || [];
+                        list.push(dataSOS);
+                        localStorage.setItem('laporan_gawat', JSON.stringify(list));
+                        
+                        alert("🚨 SINYAL SOS TERKIRIM! Tetap di posisi Anda.");
+                    }, () => alert("Gagal melacak lokasi. Pastikan GPS aktif!"));
+                }
+            }
+        }
+
+        // FUNGSI FORMULIR BIASA
         function kirimKeAdmin(kategori, ikon) {
             const nama = document.getElementById('nama-pelapor').value;
             const detail = document.getElementById('detail-kejadian').value; 
@@ -58,7 +126,6 @@
                         detail: detail, 
                         prioritas: prioritas,
                         kategori: kategori,
-                        pesan: `${ikon} UNIT ${kategori.toUpperCase()} DIBUTUHKAN SEGERA!`,
                         lat: pos.coords.latitude,
                         lng: pos.coords.longitude,
                         waktu: new Date().toLocaleTimeString()
