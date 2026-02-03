@@ -98,6 +98,7 @@
 
     <script>
         // --- KONFIGURASI FIREBASE ---
+        // Silvi, jangan lupa isi apiKey dan databaseURL asli kamu di sini ya!
         const firebaseConfig = {
             apiKey: "AIzaSy...", 
             authDomain: "gawatapp.firebaseapp.com",
@@ -111,31 +112,44 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- FUNGSI KIRIM LAPORAN ---
+        // --- FUNGSI KIRIM LAPORAN + FITUR MAPS ---
         function laporGawat(nama, teks, prioritas, kategori) {
+            // Tampilkan loading sebentar
+            console.log("Mencoba mengambil lokasi...");
+
             if (navigator.geolocation) {
+                // Gunakan High Accuracy agar lokasi tidak meleset
+                const geoOptions = {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                };
+
                 navigator.geolocation.getCurrentPosition((pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+
                     db.ref('laporan_gawat').push({
                         nama: nama,
                         pesan: teks,
                         prioritas: prioritas,
                         kategori: kategori,
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
+                        lat: lat,
+                        lng: lng,
                         waktu: new Date().toLocaleTimeString(),
                         timestamp: Date.now()
                     }).then(() => {
-                        alert(`🚀 LAPORAN ${kategori.toUpperCase()} TERKIRIM!`);
+                        alert(`🚀 LAPORAN ${kategori.toUpperCase()} TERKIRIM!\nLokasi: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
                         document.getElementById('nama-pelapor').value = "";
                         document.getElementById('detail-kejadian').value = "";
                     }).catch((err) => {
-                        alert("Gagal kirim: " + err.message);
+                        alert("Gagal kirim ke Firebase: " + err.message);
                     });
-                }, () => {
-                    alert("Tolong izinkan GPS agar petugas tahu lokasi Anda.");
-                });
+                }, (error) => {
+                    alert("GPS Gagal: Pastikan fitur Lokasi di HP/Laptop menyala.");
+                }, geoOptions);
             } else {
-                alert("Browser tidak mendukung GPS.");
+                alert("Browser kamu tidak mendukung pelacakan GPS.");
             }
         }
 
@@ -143,7 +157,7 @@
 
         // Tombol SOS Instan
         document.getElementById('sos-btn').onclick = () => {
-            if(confirm("KIRIM SINYAL SOS SEKARANG? Petugas akan segera melacak Anda!")) {
+            if(confirm("🚨 KIRIM SINYAL SOS SEKARANG?\nKoordinat lokasi Anda akan dikirim ke pusat komando!")) {
                 laporGawat("⚠️ SOS USER", "PANGGILAN DARURAT SOS! BUTUH BANTUAN SEGERA!", "Tinggi", "Ambulance");
             }
         };
@@ -155,7 +169,7 @@
             const prioritas = document.getElementById('prioritas').value;
 
             if(!nama || !detail) {
-                alert("Lengkapi nama dan detail kejadian!");
+                alert("Waduh, isi Nama dan Detail Kejadian dulu ya!");
                 return;
             }
             laporGawat(nama, detail, prioritas, kategori);
